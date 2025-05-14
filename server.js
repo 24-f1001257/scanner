@@ -122,34 +122,51 @@ const server = http.createServer(async (req, res) => {
     }
     else if (parsedUrl.pathname === '/writeData') {
         const { spreadsheetId, sheetName, data, customText } = parsedUrl.query;
-      
+
         if (!spreadsheetId || !sheetName || !data || !customText || !userState.accessToken) {
-          res.writeHead(400);
-          return res.end('Missing parameters or access token');
+            res.writeHead(400);
+            return res.end('Missing parameters or access token');
         }
         const isoTrimmed = new Date().toISOString().split('.')[0] + 'Z';
 
         // Make the request to Google Sheets API to append the data
         const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:A1:append?valueInputOption=RAW`, {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${userState.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            values: [[isoTrimmed, data, customText]], // Append both custom text and QR code data
-          }),
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${userState.accessToken}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                values: [[isoTrimmed, data, customText]], // Append both custom text and QR code data
+            }),
         });
-      
+
         if (appendRes.ok) {
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: true }));
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: true }));
         } else {
-          res.writeHead(500, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ success: false }));
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ success: false }));
         }
-      }
-      
+    }
+    else if (pathname.startsWith('/public/')) {
+        const filePath = path.join(__dirname, pathname);
+        fs.readFile(filePath, (err, data) => {
+            if (err) {
+                res.writeHead(404);
+                return res.end('File not found');
+            }
+
+            // Determine content type based on file extension
+            let contentType = 'application/octet-stream';
+            if (pathname.endsWith('.mp3')) contentType = 'audio/mpeg';
+            else if (pathname.endsWith('.ogg')) contentType = 'audio/ogg';
+
+            res.writeHead(200, { 'Content-Type': contentType });
+            res.end(data);
+        });
+    }
+
     else {
         res.writeHead(404);
         res.end('Not found');
