@@ -1,0 +1,76 @@
+<html>
+  <head>
+    <title>Select Spreadsheet</title>
+    <style>
+      body { font-family: sans-serif; margin: 40px; }
+      select, button { padding: 10px; font-size: 16px; margin: 10px 0; width: 100%; max-width: 400px; }
+    </style>
+  </head>
+  <body>
+    <h2>Select a Spreadsheet and a Sheet</h2>
+
+    <label>Spreadsheet:</label>
+    <select id="spreadsheet">
+      <option value="">Loading...</option>
+    </select>
+
+    <label>Sheet (Tab):</label>
+    <select id="sheet">
+      <option value="">-- Select a spreadsheet first --</option>
+    </select>
+
+    <button id="start">START SCAN</button>
+
+    <script>
+      async function fetchSpreadsheets() {
+        try {
+          const res = await fetch('/spreadsheets');
+          if (!res.ok) throw new Error('Failed to fetch spreadsheets');
+          const data = await res.json();
+          const select = document.getElementById('spreadsheet');
+          if (data.files && data.files.length > 0) {
+            select.innerHTML = data.files.map(f => 
+              `<option value="${f.id}">${f.name}</option>`
+            ).join('');
+          } else {
+            select.innerHTML = '<option value="">No spreadsheets available</option>';
+          }
+        } catch (error) {
+          alert('Error loading spreadsheets: ' + error.message);
+        }
+      }
+
+      document.getElementById('spreadsheet').addEventListener('change', async (e) => {
+        const id = e.target.value;
+        const sheetSelect = document.getElementById('sheet');
+        if (!id) {
+          sheetSelect.innerHTML = '<option value="">-- Select a spreadsheet first --</option>';
+          return;
+        }
+        try {
+          const res = await fetch('/sheets?spreadsheetId=' + id);
+          if (!res.ok) throw new Error('Failed to fetch sheets');
+          const data = await res.json();
+          if (data.sheets && data.sheets.length > 0) {
+            sheetSelect.innerHTML = data.sheets.map(s =>
+              `<option value="${s.title}">${s.title}</option>`
+            ).join('');
+          } else {
+            sheetSelect.innerHTML = '<option value="">No sheets available</option>';
+          }
+        } catch (error) {
+          alert('Error loading sheets: ' + error.message);
+        }
+      });
+
+      document.getElementById('start').addEventListener('click', () => {
+        const spreadsheetId = document.getElementById('spreadsheet').value;
+        const sheetName = document.getElementById('sheet').value;
+        if (!spreadsheetId || !sheetName) return alert("Select both!");
+        window.location.href = `/scanner?spreadsheetId=${spreadsheetId}&sheetName=${encodeURIComponent(sheetName)}`;
+      });
+
+      fetchSpreadsheets();
+    </script>
+  </body>
+</html>

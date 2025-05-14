@@ -1,0 +1,117 @@
+<html>
+  <head>
+    <title>QR Code Scanner</title>
+    <style>
+      body { font-family: sans-serif; margin: 40px; text-align: center; }
+      #qr-canvas { display: none; }
+      #video { width: 100%; max-width: 400px; }
+      input { padding: 10px 20px; font-size: 16px; margin: 10px 0; width: 80%; max-width: 400px; }
+    </style>
+  </head>
+  <body>
+    <h2>Scan QR Code</h2>
+    <video id="video" autoplay></video>
+    <canvas id="qr-canvas"></canvas>
+    <p>Scanned Data: <span id="scanned-data">None</span></p>
+
+    <label for="custom-text">Enter Additional Text:</label>
+    <input type="text" id="custom-text" placeholder="Enter any text..." />
+
+    <audio id="beep-sound" preload="auto">
+      <source src="../beep-24.mp3" type="audio/mpeg">
+      Your browser does not support the audio element.
+    </audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
+    <script>
+      let videoElement = document.getElementById('video');
+      let canvasElement = document.getElementById('qr-canvas');
+      let scannedDataElement = document.getElementById('scanned-data');
+      let customTextInput = document.getElementById('custom-text');
+      let beepSound = document.getElementById('beep-sound');
+      let qrCodeData = '';
+
+      const canvasContext = canvasElement.getContext('2d');
+
+      // Set up video stream
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+        .then(stream => {
+          videoElement.srcObject = stream;
+          videoElement.setAttribute('width', '100%');
+          videoElement.setAttribute('height', 'auto');
+          videoElement.play();
+        })
+        .catch(err => {
+          alert("Error accessing the camera: " + err);
+        });
+
+      // Scan QR codes every 100ms
+      function scanQRCode() {
+        if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+          canvasElement.height = videoElement.videoHeight;
+          canvasElement.width = videoElement.videoWidth;
+          canvasContext.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+          let imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+          let qrCode = jsQR(imageData.data, canvasElement.width, canvasElement.height);
+
+          if (qrCode) {
+            if (qrCode.data !== qrCodeData) {
+              qrCodeData = qrCode.data;
+              scannedDataElement.innerText = qrCodeData;
+
+              // Play beep sound
+              beepSound.play();
+
+              // Auto-submit QR code and custom text
+              submitData(qrCodeData);
+            }
+          }
+        }
+        requestAnimationFrame(scanQRCode);
+      }
+      scanQRCode();
+
+      async function submitData(scannedData) {
+        const customText = customTextInput.value.trim();
+        if (!customText) return alert("Please enter some custom text.");
+
+        const selectedSpreadsheetId = new URLSearchParams(window.location.search).get('spreadsheetId');
+        const selectedSheetName = decodeURIComponent(new URLSearchParams(window.location.search).get('sheetName'));
+
+        const res = await fetch(`/writeData?spreadsheetId=${selectedSpreadsheetId}&sheetName=${encodeURIComponent(selectedSheetName)}&data=${encodeURIComponent(scannedData)}&customText=${encodeURIComponent(customText)}`);
+        const response = await res.json();
+
+        if (response.success) {
+          alert("Data successfully written to sheet!");
+        } else {
+          alert("Failed to write data to sheet.");
+        }
+      }
+
+      document.body.addEventListener('click', () => {
+        beepSound.play().catch(err => {
+          console.warn('Beep sound playback failed:', err);
+        });
+      }, { once: true });
+
+      const audioPermissionButton = document.createElement('button');
+      audioPermissionButton.textContent = 'Enable Audio';
+      audioPermissionButton.style.position = 'fixed';
+      audioPermissionButton.style.bottom = '20px';
+      audioPermissionButton.style.right = '20px';
+      audioPermissionButton.style.padding = '10px 20px';
+      audioPermissionButton.style.fontSize = '16px';
+      audioPermissionButton.style.zIndex = '1000';
+      document.body.appendChild(audioPermissionButton);
+
+      audioPermissionButton.addEventListener('click', () => {
+        beepSound.play().then(() => {
+          alert('Audio enabled successfully!');
+          audioPermissionButton.remove();
+        }).catch(err => {
+          alert('Failed to enable audio: ' + err.message);
+        });
+      });
+    </script>
+  </body>
+</html>

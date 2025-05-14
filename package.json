@@ -1,0 +1,25 @@
+{
+  "name": "scanner",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/24-f1001257/scanner.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/24-f1001257/scanner/issues"
+  },
+  "homepage": "https://github.com/24-f1001257/scanner#readme",
+  "description": "",
+  "dependencies": {
+    "node-fetch": "^3.3.2",
+    "open": "^10.1.2"
+  }
+}
