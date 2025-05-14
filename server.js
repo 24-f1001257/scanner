@@ -6,7 +6,6 @@ const fs = require('fs');
 const path = require('path');
 
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
-let userState = {};
 
 // Use environment variables for sensitive data
 const CLIENT_ID = process.env.CLIENT_ID || '1013708675568-1nav806sg6c94vvppsm82jfqod0iou26.apps.googleusercontent.com';
@@ -23,6 +22,20 @@ const servePage = (res, pageName) => {
         res.end(data);
     });
 };
+
+const parseCookies = (req) => {
+    const list = {};
+    const cookieHeader = req.headers?.cookie;
+    if (!cookieHeader) return list;
+
+    cookieHeader.split(';').forEach(cookie => {
+        let [name, ...rest] = cookie.trim().split('=');
+        const value = rest.join('=');
+        list[name] = decodeURIComponent(value);
+    });
+    return list;
+};
+
 
 const server = http.createServer(async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
@@ -60,17 +73,17 @@ const server = http.createServer(async (req, res) => {
         });
 
         const tokenData = await tokenRes.json();
-        userState = {
-            accessToken: tokenData.access_token,
-            refreshToken: tokenData.refresh_token,
-        };
-
-        res.writeHead(302, { Location: '/select' });
+        res.writeHead(302, {
+            'Set-Cookie': `accessToken=${tokenData.access_token}; HttpOnly; Path=/; Secure; SameSite=Lax`,
+            'Location': '/select',
+        });
         res.end();
     }
 
     else if (pathname === '/select') {
-        if (!userState.accessToken) {
+        const cookies = parseCookies(req);
+        const accessToken = cookies.accessToken;
+        if (!accessToken) {
             res.writeHead(302, { Location: '/' });
             return res.end();
         }
@@ -78,7 +91,9 @@ const server = http.createServer(async (req, res) => {
     }
 
     else if (pathname === '/scanner') {
-        if (!userState.accessToken) {
+        const cookies = parseCookies(req);
+        const accessToken = cookies.accessToken;
+        if (!accessToken) {
             res.writeHead(302, { Location: '/' });
             return res.end();
         }
@@ -86,13 +101,15 @@ const server = http.createServer(async (req, res) => {
     }
 
     else if (pathname === '/spreadsheets') {
-        if (!userState.accessToken) {
+        const cookies = parseCookies(req);
+        const accessToken = cookies.accessToken;
+        if (!accessToken) {
             res.writeHead(401);
             return res.end('Not authorized');
         }
 
         const driveRes = await fetch('https://www.googleapis.com/drive/v3/files?q=mimeType="application/vnd.google-apps.spreadsheet"&fields=files(id,name)', {
-            headers: { Authorization: `Bearer ${userState.accessToken}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         const driveData = await driveRes.json();
@@ -103,13 +120,15 @@ const server = http.createServer(async (req, res) => {
 
     else if (pathname === '/sheets') {
         const spreadsheetId = parsedUrl.query.spreadsheetId;
-        if (!spreadsheetId || !userState.accessToken) {
+        const cookies = parseCookies(req);
+        const accessToken = cookies.accessToken;
+        if (!spreadsheetId || !accessToken) {
             res.writeHead(400);
             return res.end('Missing spreadsheet ID or access token');
         }
 
         const sheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
-            headers: { Authorization: `Bearer ${userState.accessToken}` },
+            headers: { Authorization: `Bearer ${accessToken}` },
         });
 
         const sheetData = await sheetRes.json();
@@ -122,8 +141,10 @@ const server = http.createServer(async (req, res) => {
     }
     else if (parsedUrl.pathname === '/writeData') {
         const { spreadsheetId, sheetName, data, customText } = parsedUrl.query;
+        const cookies = parseCookies(req);
+        const accessToken = cookies.accessToken;
 
-        if (!spreadsheetId || !sheetName || !data || !customText || !userState.accessToken) {
+        if (!spreadsheetId || !sheetName || !data || !customText || !accessToken) {
             res.writeHead(400);
             return res.end('Missing parameters or access token');
         }
@@ -133,7 +154,7 @@ const server = http.createServer(async (req, res) => {
         const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:A1:append?valueInputOption=RAW`, {
             method: 'POST',
             headers: {
-                Authorization: `Bearer ${userState.accessToken}`,
+                Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
