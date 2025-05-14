@@ -1,6 +1,5 @@
 const http = require('http');
 const url = require('url');
-const open = require('open');
 const querystring = require('querystring');
 const fs = require('fs');
 const path = require('path');
@@ -10,7 +9,6 @@ const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fet
 // Use environment variables for sensitive data
 const CLIENT_ID = process.env.CLIENT_ID || '1013708675568-1nav806sg6c94vvppsm82jfqod0iou26.apps.googleusercontent.com';
 const CLIENT_SECRET = process.env.CLIENT_SECRET || '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';
-const REDIRECT_URI = process.env.REDIRECT_URI || 'https://sgscanner-hgg8huawdagphzbx.centralindia-01.azurewebsites.net/oauth2callback';
 
 const servePage = (res, pageName) => {
     fs.readFile(path.join(__dirname, 'pages', pageName), (err, data) => {
@@ -36,10 +34,13 @@ const parseCookies = (req) => {
     return list;
 };
 
-
 const server = http.createServer(async (req, res) => {
     const parsedUrl = url.parse(req.url, true);
     const pathname = parsedUrl.pathname;
+
+    const protocol = req.headers['x-forwarded-proto'] || (req.socket.encrypted ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    const REDIRECT_URI = `${protocol}://${host}/oauth2callback`;
 
     if (pathname === '/') {
         servePage(res, 'login.html');
@@ -139,7 +140,8 @@ const server = http.createServer(async (req, res) => {
         res.writeHead(200, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ sheets }));
     }
-    else if (parsedUrl.pathname === '/writeData') {
+
+    else if (pathname === '/writeData') {
         const { spreadsheetId, sheetName, data, customText } = parsedUrl.query;
         const cookies = parseCookies(req);
         const accessToken = cookies.accessToken;
@@ -148,9 +150,9 @@ const server = http.createServer(async (req, res) => {
             res.writeHead(400);
             return res.end('Missing parameters or access token');
         }
+
         const isoTrimmed = new Date().toISOString().split('.')[0] + 'Z';
 
-        // Make the request to Google Sheets API to append the data
         const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}!A1:A1:append?valueInputOption=RAW`, {
             method: 'POST',
             headers: {
@@ -158,7 +160,7 @@ const server = http.createServer(async (req, res) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                values: [[isoTrimmed, data, customText]], // Append both custom text and QR code data
+                values: [[isoTrimmed, data, customText]],
             }),
         });
 
@@ -170,6 +172,7 @@ const server = http.createServer(async (req, res) => {
             res.end(JSON.stringify({ success: false }));
         }
     }
+
     else if (pathname.startsWith('/public/')) {
         const filePath = path.join(__dirname, pathname);
         fs.readFile(filePath, (err, data) => {
@@ -178,7 +181,6 @@ const server = http.createServer(async (req, res) => {
                 return res.end('File not found');
             }
 
-            // Determine content type based on file extension
             let contentType = 'application/octet-stream';
             if (pathname.endsWith('.mp3')) contentType = 'audio/mpeg';
             else if (pathname.endsWith('.ogg')) contentType = 'audio/ogg';
@@ -193,6 +195,7 @@ const server = http.createServer(async (req, res) => {
         res.end('Not found');
     }
 });
+
 const port = process.env.PORT || 3000;
 server.listen(port, () => {
     console.log(`Server running at http://localhost:${port}/`);
