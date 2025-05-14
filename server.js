@@ -8,10 +8,10 @@ const path = require('path');
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 let userState = {};
 
-// Fill these from Google Console
-const CLIENT_ID = '1013708675568-1nav806sg6c94vvppsm82jfqod0iou26.apps.googleusercontent.com';
-const CLIENT_SECRET = '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';
-const REDIRECT_URI = 'http://localhost:3000/oauth2callback';
+// Use environment variables for sensitive data
+const CLIENT_ID = process.env.CLIENT_ID || '1013708675568-1nav806sg6c94vvppsm82jfqod0iou26.apps.googleusercontent.com';
+const CLIENT_SECRET = process.env.CLIENT_SECRET || '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';
+const REDIRECT_URI = process.env.REDIRECT_URI || 'https://sgscanner-hgg8huawdagphzbx.centralindia-01.azurewebsites.net/oauth2callback';
 
 const servePage = (res, pageName) => {
     fs.readFile(path.join(__dirname, 'pages', pageName), (err, data) => {
@@ -172,7 +172,7 @@ const server = http.createServer(async (req, res) => {
         res.end('Not found');
     }
 });
-
-server.listen(3000, () => {
-    console.log('Server running at http://localhost:3000/');
+const port = process.env.PORT || 3000;
+server.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}/`);
 });
