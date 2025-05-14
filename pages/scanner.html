@@ -36,6 +36,12 @@
 
   <label for="custom-text">Enter Additional Text:</label>
   <input type="text" id="custom-text" placeholder="Enter any text..." />
+  <button id="add-button">Add</button>
+
+  <label for="custom-dropdown">Added Texts:</label>
+  <select id="custom-dropdown">
+    <option value="">-- Select an option --</option>
+  </select>
 
   <audio id="beep-sound" preload="auto">
     <source src="/public/beep-24.mp3" type="audio/mpeg">
@@ -92,8 +98,9 @@
     scanQRCode();
 
     async function submitData(scannedData) {
-      const customText = customTextInput.value.trim();
-      if (!customText) return alert("Please enter some custom text.");
+      const customDropdown = document.getElementById('custom-dropdown');
+      const customText = customDropdown.value.trim();
+      if (!customText) return alert("Please select a value from the dropdown.");
 
       const selectedSpreadsheetId = new URLSearchParams(window.location.search).get('spreadsheetId');
       const selectedSheetName = decodeURIComponent(new URLSearchParams(window.location.search).get('sheetName'));
@@ -114,6 +121,22 @@
       });
       document.getElementById('sound-instruction').innerText = "Sound enabled.";
     }, { once: true });
+
+    const addButton = document.getElementById('add-button');
+    const customDropdown = document.getElementById('custom-dropdown');
+
+    addButton.addEventListener('click', () => {
+      const value = customTextInput.value.trim();
+      if (value) {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        customDropdown.appendChild(option);
+        customTextInput.value = ''; // Clear the input box
+      } else {
+        alert('Please enter a value before adding.');
+      }
+    });
   </script>
 </body>
 
