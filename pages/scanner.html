@@ -2,11 +2,20 @@
 
 <head>
   <title>QR Code Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
     body {
       font-family: sans-serif;
-      margin: 40px;
+      margin: 0;
+      padding: 0 8px;
       text-align: center;
+      background: #fafbfc;
+      min-height: 100vh;
+    }
+
+    h2 {
+      margin-top: 24px;
+      font-size: 1.3em;
     }
 
     #qr-canvas {
@@ -14,16 +23,44 @@
     }
 
     #video {
-      width: 100%;
+      width: 100vw;
       max-width: 400px;
+      border-radius: 12px;
+      margin: 0 auto 16px auto;
+      box-shadow: 0 2px 8px #0002;
+      background: #000;
     }
 
-    input {
-      padding: 10px 20px;
-      font-size: 16px;
+    input,
+    select,
+    button {
+      padding: 14px 8px;
+      font-size: 1em;
       margin: 10px 0;
-      width: 80%;
+      width: 100%;
       max-width: 400px;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+
+    button {
+      background: #4285F4;
+      color: white;
+      border: none;
+      font-weight: bold;
+      box-shadow: 0 2px 8px #0001;
+    }
+
+    label {
+      display: block;
+      margin-top: 16px;
+    }
+
+    #sound-instruction {
+      font-size: 0.95em;
+      color: #888;
+      margin-top: 12px;
     }
   </style>
 </head>
