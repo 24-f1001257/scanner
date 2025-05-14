@@ -29,9 +29,10 @@
           const data = await res.json();
           const select = document.getElementById('spreadsheet');
           if (data.files && data.files.length > 0) {
-            select.innerHTML = data.files.map(f => 
-              `<option value="${f.id}">${f.name}</option>`
-            ).join('');
+            select.innerHTML = '<option value="">-- Select a spreadsheet --</option>' +
+              data.files.map(f => 
+                `<option value="${f.id}">${f.name}</option>`
+              ).join('');
           } else {
             select.innerHTML = '<option value="">No spreadsheets available</option>';
           }
@@ -52,9 +53,10 @@
           if (!res.ok) throw new Error('Failed to fetch sheets');
           const data = await res.json();
           if (data.sheets && data.sheets.length > 0) {
-            sheetSelect.innerHTML = data.sheets.map(s =>
-              `<option value="${s.title}">${s.title}</option>`
-            ).join('');
+            sheetSelect.innerHTML = '<option value="">-- Select a sheet --</option>' +
+              data.sheets.map(s =>
+                `<option value="${s.title}">${s.title}</option>`
+              ).join('');
           } else {
             sheetSelect.innerHTML = '<option value="">No sheets available</option>';
           }
